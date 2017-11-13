@@ -10,11 +10,13 @@ students = {
 }
 
 tests = [0, 1, 2, 3]
+num_tests = len(tests)
 
 related = [[0, 1], [2, 3]]
 
 today = datetime.now()
-time_slots = [today, today + timedelta(days=1)]
+timeslots = [today, today + timedelta(days=1)]
+num_timeslots = len(timeslots)
 
 # The toolbox stored the setup of the algorithm.
 # It describes the different elements to take into account.
@@ -23,7 +25,7 @@ toolbox = base.Toolbox()
 creator.create("FitnessMin", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMin)
 
-toolbox.register("indices", numpy.random.permutation, len(tests) + len(time_slots))
+toolbox.register("indices", numpy.random.permutation, num_tests + num_timeslots)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
@@ -35,49 +37,58 @@ toolbox.register("mate", tools.cxOrdered)
 toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.05)
 
 
-def tests_distance(a, b, calendar):
-    "Return the time distance between two tests in the calendar"
-    return (calendar[b] - calendar[a]).total_seconds()
+def tests_distance(test_a, test_b, calendar):
+    """Return the time distance in seconds between two tests in the calendar"""
+    return (calendar[test_b] - calendar[test_a]).total_seconds()
 
 
 def student_min_tests_distance(calendar, student_tests):
-    "Return the minimum time distance between any two tests of a student in the calendar"
+    """Return the minimum time distance in seconds
+    between any two tests of a student in the calendar"""
     student_test_ordered = sorted(student_tests, key=lambda x: calendar[x])
     return (
-        min([tests_distance(a, b, calendar)
-             for (a, b) in zip(student_test_ordered, student_test_ordered[1:])]
+        min([tests_distance(test_a, test_b, calendar)
+             for (test_a, test_b) in zip(student_test_ordered, student_test_ordered[1:])]
             )
     )
 
 
 def avg_students_min_tests_distance(calendar):
-    "Returns the average of the minimum time distance between tests in the calendar"
+    """Returns the average of the minimum time distance in seconds
+    between tests in the calendar"""
     return (sum([student_min_tests_distance(calendar, student_tests)
                  for student_tests in students.values()]) / len(students))
 
 
-def decode_calendar(individual):
-    "Returns a calendar of tests in a dict like <test_id>:<datetime>"
-    calendar = {}
-    tmp = []
-    slots = []
-    for i in individual:
-        if i < len(tests):
-            tmp.append(i)
-        else:
-            slots.append(i)
-            for test in tmp:
-                calendar[test] = time_slots[i - len(tests)]
-            tmp = []
+def is_test(idx):
+    """Return True if the index of an individual is a test otherwise return False"""
+    return idx < num_tests
 
-    for test in tmp:
-        calendar[test] = time_slots[slots[0] - len(tests)]
+
+def decode_calendar(individual):
+    """Returns a calendar of tests in a dict like <test_id>:<datetime>"""
+    calendar = {}
+    tests_without_timeslot = []
+    seen_slots = []
+    for idx in individual:
+        if is_test(idx):
+            tests_without_timeslot.append(idx)
+        else:  # is a time_slot
+            seen_slots.append(idx)
+            for test in tests_without_timeslot:
+                calendar[test] = timeslots[idx - num_tests]
+            tests_without_timeslot = []
+
+    # The individual is a circular array, if there are tests left,
+    # we assing them to the first timeslot
+    for test in tests_without_timeslot:
+        calendar[test] = timeslots[seen_slots[0] - num_tests]
 
     return calendar
 
 
 def evaluation(individual):
-    "Evaluation function for a individual"
+    """Evaluation function for a individual"""
     calendar = decode_calendar(individual)
     return (avg_students_min_tests_distance(calendar),)
 
