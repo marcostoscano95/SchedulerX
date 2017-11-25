@@ -67,18 +67,19 @@ def student_min_tests_distance(calendar, student_tests):
     """Return the minimum time distance in seconds
     between any two tests of a student in the calendar"""
     student_test_ordered = sorted(student_tests, key=lambda x: calendar[x])
-    return (
-        min([tests_distance(test_a, test_b, calendar)
-             for (test_a, test_b) in zip(student_test_ordered, student_test_ordered[1:])]
-            )
+    return min(
+        [tests_distance(test_a, test_b, calendar)
+         for (test_a, test_b) in zip(student_test_ordered, student_test_ordered[1:])]
     )
 
 
 def avg_students_min_tests_distance(calendar):
     """Returns the average of the minimum time distance in seconds
     between tests in the calendar"""
-    return (sum([student_min_tests_distance(calendar, student_tests)
-                 for student_tests in students.values()]) / len(students))
+    return sum(
+        [student_min_tests_distance(calendar, students[student])
+         for student in students]
+    ) / len(students)
 
 
 def is_test(idx):
