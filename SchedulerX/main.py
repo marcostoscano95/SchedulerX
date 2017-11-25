@@ -3,6 +3,7 @@ import numpy
 
 from datetime import datetime, timedelta
 from deap import creator, base, tools, algorithms
+from pprint import pprint
 
 # Dict with student_id: [list of tests ids]
 with open('data/enrolled.json') as f:
@@ -148,12 +149,24 @@ toolbox.register("select", tools.selTournament, tournsize=3)
 pop = toolbox.population(n=100)
 
 # crossover_probabilty=0.8; mutate_probabilty=0.2; 400 generations
-result, log = algorithms.eaSimple(pop, toolbox, cxpb=0.8, mutpb=0.2, ngen=400, verbose=False)
+result, log = algorithms.eaSimple(pop, toolbox, cxpb=0.8, mutpb=0.2, ngen=400, verbose=True)
 
 # Get best individual
 best_individual = tools.selBest(result, k=1)[0]
+calendar = decode_calendar(best_individual)
 
-print('Fitness of the best individual: ', evaluation(best_individual)[0] / 3600)
-print('Test | Date')
-for test, date in decode_calendar(best_individual).items():
-    print('  {}   {}'.format(test, date.strftime(' %d %HH:%MM')))
+print('avg_students_min_tests_distance: {} hours'.format(
+    avg_students_min_tests_distance(calendar) / 3600)
+)
+print('Bad luck students: {}'.format(bad_luck_students(calendar)))
+print('Max #students in a timescope: {}'.format(total_capacity_exceed(calendar)))
+
+result = {}
+
+for test, date in calendar.items():
+    result.setdefault(date.strftime('%d/%m %HH:%MM'), {}
+                      ).setdefault('testnames', []).append(tests[test])
+    result[date.strftime('%d/%m %HH:%MM')].setdefault('count', 0)
+    result[date.strftime('%d/%m %HH:%MM')]['count'] += len(enrolled_by_subjectid[test])
+
+pprint(result)
