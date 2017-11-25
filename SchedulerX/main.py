@@ -109,6 +109,27 @@ def decode_calendar(individual):
     return calendar
 
 
+def capacity_exceed(test_dates):
+    return [sum([len(enrolled_by_subjectid[test_id]) for test_id in test_dates[test_date]])
+            for test_date in test_dates]
+
+
+def total_capacity_exceed(calendar):
+    test_dates = {}
+    for test_id in calendar:
+        test_dates.setdefault(calendar[test_id], set()).add(test_id)
+
+    return max(capacity_exceed(test_dates))
+
+
+def bad_luck_students(calendar):
+    return len(
+        [student_min_tests_distance(calendar, students[student])
+         for student in students
+         if student_min_tests_distance(calendar, students[student]) == 0]
+    )
+
+
 def evaluation(individual):
     """Evaluation function for a individual"""
     calendar = decode_calendar(individual)
