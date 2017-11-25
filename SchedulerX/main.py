@@ -38,12 +38,13 @@ for slot in range(num_days):
 max_time_distance = (timeslots[-1] - timeslots[0]).total_seconds()
 num_timeslots = len(timeslots)
 
+
 # The toolbox stored the setup of the algorithm.
 # It describes the different elements to take into account.
 toolbox = base.Toolbox()
 
-creator.create("FitnessMin", base.Fitness, weights=(1.0,))
-creator.create("Individual", list, fitness=creator.FitnessMin)
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", numpy.ndarray, fitness=creator.FitnessMax)
 
 toolbox.register("indices", numpy.random.permutation, num_tests + num_timeslots)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
