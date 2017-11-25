@@ -133,7 +133,10 @@ def bad_luck_students(calendar):
 def evaluation(individual):
     """Evaluation function for a individual"""
     calendar = decode_calendar(individual)
-    return (avg_students_min_tests_distance(calendar),)
+    fitness = 4 * avg_students_min_tests_distance(calendar) / max_time_distance
+    fitness -= 8 * bad_luck_students(calendar) / len(students)
+    fitness -= 0.5 * total_capacity_exceed(calendar) / 4000
+    return (fitness, )
 
 
 toolbox.register("evaluate", evaluation)
