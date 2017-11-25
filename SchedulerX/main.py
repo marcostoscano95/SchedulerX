@@ -1,18 +1,28 @@
+import json
 import numpy
-from deap import creator, base, tools, algorithms
+
 from datetime import datetime, timedelta
+from deap import creator, base, tools, algorithms
 
 # Dict with student_id: [list of tests ids]
-students = {
-    1: [0, 1], 2: [0, 3], 3: [0, 3], 4: [1, 2], 5: [1, 3], 6: [2, 3], 7: [0, 1], 8: [0, 2],
-    9: [0, 3], 10: [1, 2], 11: [1, 3], 12: [2, 3], 13: [0, 1], 14: [1, 2], 15: [1, 3],
-    16: [1, 2], 17: [1, 3], 18: [1, 2], 19: [1, 2], 20: [1, 2],
-}
+with open('data/enrolled.json') as f:
+    enrolled_by_subject = json.load(f)
 
-tests = [0, 1, 2, 3]
-num_tests = len(tests)
+tests = {}
+enrolled_by_subjectid = {}
+for i, subject_name in enumerate(enrolled_by_subject):
+    enrolled_by_subjectid[i] = enrolled_by_subject[subject_name]
+    tests[i] = subject_name
 
-related = [[0, 1], [2, 3]]
+students2 = {}
+for subject_id in enrolled_by_subjectid:
+    for enrolled_student in enrolled_by_subjectid[subject_id]:
+        students2.setdefault(enrolled_student, set()).add(subject_id)
+
+students = {}
+for student in students2:
+    if len(students2[student]) > 1:
+        students[student] = students2[student]
 
 today = datetime.now()
 timeslots = [today, today + timedelta(days=1)]
