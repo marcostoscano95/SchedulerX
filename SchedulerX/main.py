@@ -24,8 +24,18 @@ for student in students2:
     if len(students2[student]) > 1:
         students[student] = students2[student]
 
-today = datetime.now()
-timeslots = [today, today + timedelta(days=1)]
+num_tests = len(tests)
+
+num_days = 7
+day = datetime.now().replace(day=1)
+timeslots = []
+for slot in range(num_days):
+    timeslots.append(day.replace(hour=9, minute=0))
+    timeslots.append(day.replace(hour=14, minute=0))
+    timeslots.append(day.replace(hour=18, minute=0))
+    day = day + timedelta(days=1)
+
+max_time_distance = (timeslots[-1] - timeslots[0]).total_seconds()
 num_timeslots = len(timeslots)
 
 # The toolbox stored the setup of the algorithm.
