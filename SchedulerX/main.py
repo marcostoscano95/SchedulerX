@@ -10,30 +10,34 @@ with open('data/enrolled.json') as f:
     enrolled_by_subject = json.load(f)
 
 tests = {}
-enrolled_by_subjectid = {}
+students_by_subjectid = {}
 for i, subject_name in enumerate(enrolled_by_subject):
-    enrolled_by_subjectid[i] = enrolled_by_subject[subject_name]
+    students_by_subjectid[i] = enrolled_by_subject[subject_name]
     tests[i] = subject_name
 
-students2 = {}
-for subject_id in enrolled_by_subjectid:
-    for enrolled_student in enrolled_by_subjectid[subject_id]:
-        students2.setdefault(enrolled_student, set()).add(subject_id)
-
 students = {}
-for student in students2:
-    if len(students2[student]) > 1:
-        students[student] = students2[student]
+num_student_by_subject_id = {}
+for subject_id in students_by_subjectid:
+    for enrolled_student in students_by_subjectid[subject_id]:
+        students.setdefault(enrolled_student, set()).add(subject_id)
+    num_student_by_subject_id[subject_id] = len(students_by_subjectid[subject_id])
+
+students_with_at_least_to_test = {}
+
+for student in students:
+    if len(students[student]) > 1:
+        students_with_at_least_to_test[student] = students[student]
 
 num_tests = len(tests)
+num_students_with_at_least_to_test = len(students_with_at_least_to_test)
 
-num_days = 7
-day = datetime.now().replace(day=1)
+num_days = 8
+day = datetime.now().replace(day=1, minute=0)
 timeslots = []
 for slot in range(num_days):
-    timeslots.append(day.replace(hour=9, minute=0))
-    timeslots.append(day.replace(hour=14, minute=0))
-    timeslots.append(day.replace(hour=18, minute=0))
+    timeslots.append(day.replace(hour=9))
+    timeslots.append(day.replace(hour=14))
+    timeslots.append(day.replace(hour=18))
     day = day + timedelta(days=1)
 
 max_time_distance = (timeslots[-1] - timeslots[0]).total_seconds()
@@ -78,9 +82,9 @@ def avg_students_min_tests_distance(calendar):
     """Returns the average of the minimum time distance in seconds
     between tests in the calendar"""
     return sum(
-        [student_min_tests_distance(calendar, students[student])
-         for student in students]
-    ) / len(students)
+        [student_min_tests_distance(calendar, students_with_at_least_to_test[student])
+         for student in students_with_at_least_to_test]
+    ) / num_students_with_at_least_to_test
 
 
 def is_test(idx):
@@ -111,7 +115,7 @@ def decode_calendar(individual):
 
 
 def capacity_exceed(test_dates):
-    return [sum([len(enrolled_by_subjectid[test_id]) for test_id in test_dates[test_date]])
+    return [sum([num_student_by_subject_id[test_id] for test_id in test_dates[test_date]])
             for test_date in test_dates]
 
 
@@ -125,9 +129,9 @@ def total_capacity_exceed(calendar):
 
 def bad_luck_students(calendar):
     return len(
-        [student_min_tests_distance(calendar, students[student])
-         for student in students
-         if student_min_tests_distance(calendar, students[student]) == 0]
+        [student_min_tests_distance(calendar, students_with_at_least_to_test[student])
+         for student in students_with_at_least_to_test
+         if student_min_tests_distance(calendar, students_with_at_least_to_test[student]) == 0]
     )
 
 
@@ -135,7 +139,7 @@ def evaluation(individual):
     """Evaluation function for a individual"""
     calendar = decode_calendar(individual)
     fitness = 4 * avg_students_min_tests_distance(calendar) / max_time_distance
-    fitness -= 8 * bad_luck_students(calendar) / len(students)
+    fitness -= 8 * bad_luck_students(calendar) / num_students_with_at_least_to_test
     fitness -= 0.5 * total_capacity_exceed(calendar) / 4000
     return (fitness, )
 
@@ -148,8 +152,13 @@ toolbox.register("select", tools.selTournament, tournsize=3)
 # Population of 100 individuals.
 pop = toolbox.population(n=100)
 
+first_stats = tools.Statistics(key=lambda ind: ind.fitness.values[0])
+stats = tools.MultiStatistics(obj1=first_stats)
+stats.register("min", numpy.max, axis=0)
+
 # crossover_probabilty=0.8; mutate_probabilty=0.2; 400 generations
-result, log = algorithms.eaSimple(pop, toolbox, cxpb=0.8, mutpb=0.2, ngen=400, verbose=True)
+result, log = algorithms.eaSimple(
+    pop, toolbox, cxpb=0.8, mutpb=0.2, ngen=1000, stats=stats, verbose=True)
 
 # Get best individual
 best_individual = tools.selBest(result, k=1)[0]
@@ -167,6 +176,6 @@ for test, date in calendar.items():
     result.setdefault(date.strftime('%d/%m %HH:%MM'), {}
                       ).setdefault('testnames', []).append(tests[test])
     result[date.strftime('%d/%m %HH:%MM')].setdefault('count', 0)
-    result[date.strftime('%d/%m %HH:%MM')]['count'] += len(enrolled_by_subjectid[test])
+    result[date.strftime('%d/%m %HH:%MM')]['count'] += num_student_by_subject_id[test]
 
 pprint(result)
