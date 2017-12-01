@@ -24,6 +24,7 @@ for subject_id in students_by_subjectid:
     num_student_by_subject_id[subject_id] = len(students_by_subjectid[subject_id])
 
 students_with_at_least_to_test = {}
+num_student_by_subject = sum(num_student_by_subject_id.values())
 
 for student in students:
     if len(students[student]) > 1:
