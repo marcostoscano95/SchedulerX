@@ -33,7 +33,7 @@ for student in students:
 num_tests = len(tests)
 num_students_with_at_least_to_test = len(students_with_at_least_to_test)
 
-num_days = 8
+num_days = 9
 day = datetime.now().replace(day=1, minute=0)
 timeslots = []
 for slot in range(num_days):
@@ -50,7 +50,7 @@ num_timeslots = len(timeslots)
 # It describes the different elements to take into account.
 toolbox = base.Toolbox()
 
-creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("FitnessMax", base.Fitness, weights=(1.0, 1.0, 1.0, 1.0,))
 creator.create("Individual", numpy.ndarray, fitness=creator.FitnessMax)
 
 toolbox.register("indices", numpy.random.permutation, num_tests + num_timeslots)
@@ -142,10 +142,13 @@ def bad_luck_students(calendar):
 def evaluation(individual):
     """Evaluation function for a individual"""
     calendar = decode_calendar(individual)
-    fitness = 4 * avg_students_min_tests_distance(calendar) / max_time_distance
-    fitness -= 8 * bad_luck_students(calendar) / num_students_with_at_least_to_test
-    fitness -= 0.5 * total_capacity_exceed(calendar) / 4000
-    return (fitness, )
+    avg = avg_students_min_tests_distance(calendar)
+    bad = bad_luck_students(calendar)
+    capa = total_capacity_exceed(calendar)
+    fitness1 = 2 * (avg / max_time_distance) ** 2
+    fitness2 = 4 * (1 - bad / num_students_with_at_least_to_test) ** 2
+    fitness3 = (capa / num_student_by_subject) ** 2
+    return (fitness1 + fitness2 - fitness3, avg / 3600, bad, capa)
 
 
 toolbox.register("evaluate", evaluation)
@@ -154,11 +157,16 @@ toolbox.register("evaluate", evaluation)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 # Population of 100 individuals.
-pop = toolbox.population(n=100)
+pop = toolbox.population(n=59)
 
-first_stats = tools.Statistics(key=lambda ind: ind.fitness.values[0])
-stats = tools.MultiStatistics(obj1=first_stats)
-stats.register("min", numpy.max, axis=0)
+stats1 = tools.Statistics(lambda ind: ind.fitness.values[0])
+stats2 = tools.Statistics(lambda ind: ind.fitness.values[1])
+stats3 = tools.Statistics(lambda ind: ind.fitness.values[2])
+stats4 = tools.Statistics(lambda ind: ind.fitness.values[3])
+stats = tools.MultiStatistics(
+    nasty=stats1, distance=stats2, badluck=stats3, capacity=stats4)
+stats.register("max", numpy.max)
+stats.register("min", numpy.min)
 
 # crossover_probabilty=0.8; mutate_probabilty=0.2; 400 generations
 result, log = algorithms.eaSimple(
