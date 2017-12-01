@@ -4,6 +4,7 @@ import numpy
 from datetime import datetime, timedelta
 from deap import creator, base, tools, algorithms
 from pprint import pprint
+from custom_map import custom_map
 
 # Dict with student_id: [list of tests ids]
 with open('data/enrolled.json') as f:
@@ -61,6 +62,8 @@ toolbox.register("mate", tools.cxOrdered)
 
 # Mutation that swap elements from two points of the individual.
 toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.05)
+
+toolbox.register("map", custom_map)
 
 
 def tests_distance(test_a, test_b, calendar):
