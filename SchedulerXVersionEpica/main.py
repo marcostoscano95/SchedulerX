@@ -135,8 +135,8 @@ def decode_calendar(individual):
 
     return calendar
 
-def test_whit_timeslots(calendar):
-    
+#def test_whit_timeslots(calendar):
+
 
 def capacity_exceed(test_dates):
     return [sum([num_student_by_subject_id[test_id] for test_id in test_dates[test_date]])
@@ -189,7 +189,7 @@ stats.register("min", numpy.min)
 
 # crossover_probabilty=0.8; mutate_probabilty=0.2; 400 generations
 result, log = algorithms.eaSimple(
-    pop, toolbox, cxpb=0.8, mutpb=0.2, ngen=1000, stats=stats, verbose=True)
+    pop, toolbox, cxpb=0.8, mutpb=0.2, ngen=50, stats=stats, verbose=True)
 
 # Get best individual
 best_individual = tools.selBest(result, k=1)[0]
