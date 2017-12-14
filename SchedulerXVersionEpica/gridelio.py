@@ -1,6 +1,7 @@
 import json
 import numpy
 import itertools
+import operator
 
 from datetime import datetime, timedelta
 from deap import creator, base, tools, algorithms
@@ -63,27 +64,6 @@ for slot in range(num_days):
 
 max_time_distance = (timeslots[-1] - timeslots[0]).total_seconds()
 num_timeslots = len(timeslots)
-
-
-# The toolbox stored the setup of the algorithm.
-# It describes the different elements to take into account.
-toolbox = base.Toolbox()
-
-creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-creator.create("Individual", numpy.ndarray, fitness=creator.FitnessMax)
-
-toolbox.register("indices", numpy.random.permutation, num_tests + num_timeslots)
-toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-
-# Ordered crossover (OX).
-toolbox.register("mate", tools.cxOrdered)
-
-# Mutation that swap elements from two points of the individual.
-toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.05)
-
-toolbox.register("map", custom_map)
 
 def tests_distance(test_a, test_b, calendar):
     """Return the time distance in seconds between two tests in the calendar"""
@@ -167,37 +147,36 @@ def evaluation(individual):
     capa = total_capacity_exceed(calendar)
     fitness1 = 2 * (avg / max_time_distance) ** 2
     fitness2 = 4 * (1 - bad / num_students_with_at_least_to_test) ** 2
-    fitness3 = 3/2 * (capa / num_student_by_subject) ** 2
+    fitness3 = (capa / num_student_by_subject) ** 2
     return (fitness1 + fitness2 - fitness3,)
 
-toolbox.register("evaluate", evaluation)
+order_num_students_by_subject_id = sorted(num_student_by_subject_id.items(), key=operator.itemgetter(1))
+order_num_students_by_subject_id.reverse()
 
-# We will employ tournament selection with size 3
-toolbox.register("select", tools.selTournament, tournsize=3)
+best_individual = []
 
-# Population of 100 individuals.
-pop = toolbox.population(n=59)
+for idx in range(0,num_tests + num_timeslots - 1):
+    best_individual.append(idx)
 
-stats1 = tools.Statistics(lambda ind: ind.fitness.values[0])
-stats1.register("max", numpy.max)
-stats1.register("avg", numpy.mean)
-stats1.register("min", numpy.min)
-stats1.register("std", numpy.std)
+cant_pos = num_timeslots - 1
+best_fittnes = (-30,)
+position_fittnes = 0
+position = 0
 
-# crossover_probabilty=0.8; mutate_probabilty=0.2; 400 generations
-result, log = algorithms.eaSimple(
-    pop, toolbox, cxpb=0.6, mutpb=0.2, ngen=10, stats=stats1, verbose=True)
+for idx_test,num_student_test in order_num_students_by_subject_id:
+    best_individual.remove(idx_test)
+    best_fittnes = (-30,)
+    position =  0
+    for index in range(0,num_tests + num_timeslots - 2):
+        best_individual.insert(index,idx_test)
+        position_fittnes = evaluation(best_individual)
+        if best_fittnes[0] < position_fittnes[0]:
+            best_fittnes = position_fittnes
+            position = index
+        best_individual.pop(index)
+    best_individual.insert(position,idx_test)
 
-# Get best individual
-best_individual = tools.selBest(result, k=1)[0]
 calendar = decode_calendar(best_individual)
-
-print('avg_students_min_tests_distance: {} hours'.format(
-    avg_students_min_tests_distance(calendar) / 3600)
-)
-print('Bad luck students: {}'.format(bad_luck_students(calendar)))
-print('Max #students in a timescope: {}'.format(total_capacity_exceed(calendar)))
-
 result = {}
 
 for test, date in calendar.items():
@@ -207,6 +186,13 @@ for test, date in calendar.items():
     result[date.strftime('%d/%m %HH:%MM')]['count'].append(num_student_by_subject_id[test])
     result[date.strftime('%d/%m %HH:%MM')].setdefault('salones',[])
 
+# stats1 = best_fittnes[0]
+# stats1.register("max", numpy.max)
+# stats1.register("avg", numpy.mean)
+# stats1.register("min", numpy.min)
+# stats1.register("std", numpy.std)
+#
+# print(stats1)
 
 for i, date_time in enumerate(result):
     ola = result[date_time]['count']
@@ -328,7 +314,7 @@ t.setStyle(TableStyle(styletable))
 #                     ('ALIGN',(3,2),(3,2),'LEFT'),
 story.append(t)
 doc = SimpleDocTemplate(
-        'Esqueleto.pdf',
+        "GreedyNeoLiberal.pdf",
         pagesize=A4,
 showBoundary=0)
 doc.build(story)
